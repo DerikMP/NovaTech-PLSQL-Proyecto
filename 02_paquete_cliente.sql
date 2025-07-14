@@ -1,39 +1,27 @@
-
 -- =============================
 -- ESPECIFICACIÓN DEL PAQUETE
 -- =============================
 CREATE OR REPLACE PACKAGE PAQ_CLIENTE AS
   -- Inserta un nuevo cliente en la tabla CLIENTE
-  PROCEDURE insertar_cliente(p_nombre VARCHAR2, p_tipo_cliente VARCHAR2, p_email VARCHAR2);
+  PROCEDURE crear_cliente(p_nombre VARCHAR2, p_tipo_cliente VARCHAR2, p_email VARCHAR2);
 
-  -- Actualiza los datos de un cliente existente según su ID
   PROCEDURE actualizar_cliente(p_id_cliente NUMBER, p_nombre VARCHAR2, p_tipo_cliente VARCHAR2, p_email VARCHAR2);
-
-  -- Elimina un cliente de la tabla CLIENTE por su ID
   PROCEDURE eliminar_cliente(p_id_cliente NUMBER);
-
-  -- Busca un cliente por su ID y retorna un cursor con la información
   PROCEDURE buscar_cliente(p_id_cliente NUMBER, p_cursor OUT SYS_REFCURSOR);
-
-  -- Lista todos los clientes registrados
   PROCEDURE listar_clientes(p_cursor OUT SYS_REFCURSOR);
 
-  -- Valida si un correo electrónico tiene un formato válido
   FUNCTION fn_validar_correo(p_email VARCHAR2) RETURN BOOLEAN;
-
-  -- Verifica si un cliente es del tipo 'EMPRESA'
   FUNCTION fn_es_cliente_empresa(p_id_cliente NUMBER) RETURN BOOLEAN;
-
-  -- Cuenta cuántas órdenes de servicio están asociadas al cliente
   FUNCTION fn_contar_ordenes_cliente(p_id_cliente NUMBER) RETURN NUMBER;
 END PAQ_CLIENTE;
 /
+
 -- ===========================
 -- CUERPO DEL PAQUETE
 -- ===========================
 CREATE OR REPLACE PACKAGE BODY PAQ_CLIENTE AS
 
-  PROCEDURE insertar_cliente(p_nombre VARCHAR2, p_tipo_cliente VARCHAR2, p_email VARCHAR2) IS
+  PROCEDURE crear_cliente(p_nombre VARCHAR2, p_tipo_cliente VARCHAR2, p_email VARCHAR2) IS
   BEGIN
     IF fn_validar_correo(p_email) THEN
       INSERT INTO CLIENTE (NOMBRE, TIPO_CLIENTE, EMAIL)
