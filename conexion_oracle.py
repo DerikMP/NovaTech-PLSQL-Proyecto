@@ -45,15 +45,16 @@ def listar_clientes():
 def buscar_cliente():
     try:
         id_cliente = int(input("Ingrese ID del cliente a buscar: "))
-        ref_cursor = cursor.var(oracledb.CURSOR)
+        ref_cursor = connection.cursor()
         cursor.callproc("PAQ_CLIENTE.buscar_cliente", [id_cliente, ref_cursor])
-        row = ref_cursor.getvalue().fetchone()
+        row = ref_cursor.fetchone()
         if row:
             print("✅ Cliente encontrado:", row, "\n")
         else:
             print("⚠️ Cliente no encontrado.\n")
     except Exception as e:
         print("❌ Error al buscar cliente:", e, "\n")
+
 
 def eliminar_cliente():
     try:
