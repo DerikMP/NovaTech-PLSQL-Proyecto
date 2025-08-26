@@ -1,16 +1,21 @@
 --------------------------------------------------------
--- Archivo creado  - lunes-julio-14-2025   
+-- Archivo creado  - lunes-agosto-25-2025   
 --------------------------------------------------------
+--------------------------------------------------------
+--  DDL for Sequence SEQ_CLIENTE
+--------------------------------------------------------
+
+   CREATE SEQUENCE  "DERIK"."SEQ_CLIENTE"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 41 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
 --------------------------------------------------------
 --  DDL for Table CLIENTE
 --------------------------------------------------------
 
   CREATE TABLE "DERIK"."CLIENTE" 
-   (	"ID_CLIENTE" NUMBER(*,0), 
+   (	"ID_CLIENTE" NUMBER, 
 	"NOMBRE" VARCHAR2(50 BYTE), 
 	"APELLIDO" VARCHAR2(50 BYTE), 
-	"TIPO_CLIENTE" VARCHAR2(10 BYTE), 
-	"EMAIL" VARCHAR2(50 BYTE), 
+	"TIPO_CLIENTE" VARCHAR2(20 BYTE), 
+	"EMAIL" VARCHAR2(100 BYTE), 
 	"TELEFONO" NUMBER
    ) SEGMENT CREATION IMMEDIATE 
   PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 
@@ -122,8 +127,8 @@
   TABLESPACE "USERS" ;
 REM INSERTING into DERIK.CLIENTE
 SET DEFINE OFF;
-Insert into DERIK.CLIENTE (ID_CLIENTE,NOMBRE,APELLIDO,TIPO_CLIENTE,EMAIL,TELEFONO) values (1,'Carlos','Ramírez','EMPRESA','carlos@empresa.com',88889999);
-Insert into DERIK.CLIENTE (ID_CLIENTE,NOMBRE,APELLIDO,TIPO_CLIENTE,EMAIL,TELEFONO) values (2,'María','Gómez','PERSONA','maria@gmail.com',88997766);
+Insert into DERIK.CLIENTE (ID_CLIENTE,NOMBRE,APELLIDO,TIPO_CLIENTE,EMAIL,TELEFONO) values (1,'Andres','Ulloa','PERSONA','carlos@gmail.com',88345768);
+Insert into DERIK.CLIENTE (ID_CLIENTE,NOMBRE,APELLIDO,TIPO_CLIENTE,EMAIL,TELEFONO) values (21,'Juan','Monge','PERSONA','juanM@gmail.com',12345678);
 REM INSERTING into DERIK.CONTRATO_MANTENIMIENTO
 SET DEFINE OFF;
 REM INSERTING into DERIK.DETALLE_SERVICIO
@@ -168,36 +173,41 @@ END;
 /
 ALTER TRIGGER "DERIK"."TRG_ESTADO_POR_DEFECTO_ORDEN" ENABLE;
 --------------------------------------------------------
---  DDL for Trigger TRG_VALIDAR_CORREO_CLIENTE
---------------------------------------------------------
-
-  CREATE OR REPLACE NONEDITIONABLE TRIGGER "DERIK"."TRG_VALIDAR_CORREO_CLIENTE" 
-BEFORE INSERT ON cliente
-FOR EACH ROW
-BEGIN
-  IF NOT REGEXP_LIKE(:NEW.email, '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$') THEN
-    RAISE_APPLICATION_ERROR(-20001, 'Correo electrónico no válido');
-  END IF;
-END;
-
-/
-ALTER TRIGGER "DERIK"."TRG_VALIDAR_CORREO_CLIENTE" ENABLE;
---------------------------------------------------------
 --  DDL for Package PAQ_CLIENTE
 --------------------------------------------------------
 
   CREATE OR REPLACE NONEDITIONABLE PACKAGE "DERIK"."PAQ_CLIENTE" AS
-  -- Inserta un nuevo cliente en la tabla CLIENTE
-  PROCEDURE crear_cliente(p_nombre VARCHAR2, p_tipo_cliente VARCHAR2, p_email VARCHAR2);
-
-  PROCEDURE actualizar_cliente(p_id_cliente NUMBER, p_nombre VARCHAR2, p_tipo_cliente VARCHAR2, p_email VARCHAR2);
-  PROCEDURE eliminar_cliente(p_id_cliente NUMBER);
-  PROCEDURE buscar_cliente(p_id_cliente NUMBER, p_cursor OUT SYS_REFCURSOR);
-  PROCEDURE listar_clientes(p_cursor OUT SYS_REFCURSOR);
 
   FUNCTION fn_validar_correo(p_email VARCHAR2) RETURN BOOLEAN;
-  FUNCTION fn_es_cliente_empresa(p_id_cliente NUMBER) RETURN BOOLEAN;
-  FUNCTION fn_contar_ordenes_cliente(p_id_cliente NUMBER) RETURN NUMBER;
+
+  PROCEDURE insertar_cliente(
+      p_nombre       VARCHAR2,
+      p_apellido     VARCHAR2,
+      p_tipo_cliente VARCHAR2,
+      p_email        VARCHAR2,
+      p_telefono     NUMBER
+  );
+
+  PROCEDURE actualizar_cliente(
+      p_id_cliente   NUMBER,
+      p_nombre       VARCHAR2,
+      p_apellido     VARCHAR2,
+      p_tipo_cliente VARCHAR2,
+      p_email        VARCHAR2,
+      p_telefono     NUMBER
+  );
+
+  PROCEDURE eliminar_cliente(p_id_cliente NUMBER);
+
+  FUNCTION obtener_cliente(p_id_cliente NUMBER) RETURN SYS_REFCURSOR;
+
+  -- ===========================================
+  -- 🔹 Nuevos para Python
+  -- ===========================================
+  PROCEDURE listar_clientes(p_cursor OUT SYS_REFCURSOR);
+
+  PROCEDURE buscar_cliente(p_id_cliente NUMBER, p_cursor OUT SYS_REFCURSOR);
+
 END PAQ_CLIENTE;
 
 /
@@ -395,81 +405,77 @@ END PAQ_TECNICO;
 
   CREATE OR REPLACE NONEDITIONABLE PACKAGE BODY "DERIK"."PAQ_CLIENTE" AS
 
-  PROCEDURE crear_cliente(p_nombre VARCHAR2, p_tipo_cliente VARCHAR2, p_email VARCHAR2) IS
+  FUNCTION fn_validar_correo(p_email VARCHAR2) RETURN BOOLEAN IS
   BEGIN
-    IF fn_validar_correo(p_email) THEN
-      INSERT INTO CLIENTE (NOMBRE, TIPO_CLIENTE, EMAIL)
-      VALUES (p_nombre, p_tipo_cliente, p_email);
-    ELSE
-      RAISE_APPLICATION_ERROR(-20001, 'Correo no válido.');
-    END IF;
-  EXCEPTION
-    WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('Error al insertar cliente: ' || SQLERRM);
-  END;
+    RETURN REGEXP_LIKE(p_email, '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+  END fn_validar_correo;
 
-  PROCEDURE actualizar_cliente(p_id_cliente NUMBER, p_nombre VARCHAR2, p_tipo_cliente VARCHAR2, p_email VARCHAR2) IS
+  PROCEDURE insertar_cliente(
+      p_nombre       VARCHAR2,
+      p_apellido     VARCHAR2,
+      p_tipo_cliente VARCHAR2,
+      p_email        VARCHAR2,
+      p_telefono     NUMBER
+  ) IS
   BEGIN
-    UPDATE CLIENTE
-    SET NOMBRE = p_nombre,
-        TIPO_CLIENTE = p_tipo_cliente,
-        EMAIL = p_email
-    WHERE ID_CLIENTE = p_id_cliente;
-  EXCEPTION
-    WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('Error al actualizar cliente: ' || SQLERRM);
-  END;
+      IF fn_validar_correo(p_email) THEN
+        INSERT INTO CLIENTE (ID_CLIENTE, NOMBRE, APELLIDO, TIPO_CLIENTE, EMAIL, TELEFONO)
+        VALUES (SEQ_CLIENTE.NEXTVAL, p_nombre, p_apellido, p_tipo_cliente, p_email, p_telefono);
+      ELSE
+        RAISE_APPLICATION_ERROR(-20001, 'Correo no válido.');
+      END IF;
+  END insertar_cliente;
+
+  PROCEDURE actualizar_cliente(
+      p_id_cliente   NUMBER,
+      p_nombre       VARCHAR2,
+      p_apellido     VARCHAR2,
+      p_tipo_cliente VARCHAR2,
+      p_email        VARCHAR2,
+      p_telefono     NUMBER
+  ) IS
+  BEGIN
+      IF fn_validar_correo(p_email) THEN
+        UPDATE CLIENTE
+        SET NOMBRE       = p_nombre,
+            APELLIDO     = p_apellido,
+            TIPO_CLIENTE = p_tipo_cliente,
+            EMAIL        = p_email,
+            TELEFONO     = p_telefono
+        WHERE ID_CLIENTE = p_id_cliente;
+      ELSE
+        RAISE_APPLICATION_ERROR(-20002, 'Correo no válido.');
+      END IF;
+  END actualizar_cliente;
 
   PROCEDURE eliminar_cliente(p_id_cliente NUMBER) IS
   BEGIN
     DELETE FROM CLIENTE WHERE ID_CLIENTE = p_id_cliente;
-  EXCEPTION
-    WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('Error al eliminar cliente: ' || SQLERRM);
-  END;
+  END eliminar_cliente;
 
-  PROCEDURE buscar_cliente(p_id_cliente NUMBER, p_cursor OUT SYS_REFCURSOR) IS
+  FUNCTION obtener_cliente(p_id_cliente NUMBER) RETURN SYS_REFCURSOR IS
+    v_cursor SYS_REFCURSOR;
   BEGIN
-    OPEN p_cursor FOR
-    SELECT * FROM CLIENTE WHERE ID_CLIENTE = p_id_cliente;
-  END;
+    OPEN v_cursor FOR
+      SELECT * FROM CLIENTE WHERE ID_CLIENTE = p_id_cliente;
+    RETURN v_cursor;
+  END obtener_cliente;
+
+  -- ===========================================
+  -- 🔹 Nuevos para el Python
+  -- ===========================================
 
   PROCEDURE listar_clientes(p_cursor OUT SYS_REFCURSOR) IS
   BEGIN
     OPEN p_cursor FOR
-    SELECT * FROM CLIENTE;
-  END;
+      SELECT * FROM CLIENTE;
+  END listar_clientes;
 
-  FUNCTION fn_validar_correo(p_email VARCHAR2) RETURN BOOLEAN IS
+  PROCEDURE buscar_cliente(p_id_cliente NUMBER, p_cursor OUT SYS_REFCURSOR) IS
   BEGIN
-    RETURN REGEXP_LIKE(p_email, '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$');
-  END;
-
-  FUNCTION fn_es_cliente_empresa(p_id_cliente NUMBER) RETURN BOOLEAN IS
-    v_tipo_cliente VARCHAR2(20);
-  BEGIN
-    SELECT TIPO_CLIENTE INTO v_tipo_cliente
-    FROM CLIENTE
-    WHERE ID_CLIENTE = p_id_cliente;
-    RETURN UPPER(v_tipo_cliente) = 'EMPRESA';
-  EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-      RETURN FALSE;
-  END;
-
-  FUNCTION fn_contar_ordenes_cliente(p_id_cliente NUMBER) RETURN NUMBER IS
-    v_total NUMBER;
-  BEGIN
-    SELECT COUNT(*)
-    INTO v_total
-    FROM ORDEN_SERVICIO os
-    JOIN EQUIPO e ON os.ID_EQUIPO = e.ID_EQUIPO
-    WHERE e.ID_CLIENTE = p_id_cliente;
-    RETURN v_total;
-  EXCEPTION
-    WHEN OTHERS THEN
-      RETURN 0;
-  END;
+    OPEN p_cursor FOR
+      SELECT * FROM CLIENTE WHERE ID_CLIENTE = p_id_cliente;
+  END buscar_cliente;
 
 END PAQ_CLIENTE;
 
@@ -985,17 +991,20 @@ END PAQ_TECNICO;
 --  Constraints for Table CLIENTE
 --------------------------------------------------------
 
+  ALTER TABLE "DERIK"."CLIENTE" MODIFY ("NOMBRE" NOT NULL ENABLE);
+  ALTER TABLE "DERIK"."CLIENTE" MODIFY ("APELLIDO" NOT NULL ENABLE);
   ALTER TABLE "DERIK"."CLIENTE" ADD PRIMARY KEY ("ID_CLIENTE")
-  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 
   STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
   PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1
   BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
   TABLESPACE "USERS"  ENABLE;
-  ALTER TABLE "DERIK"."CLIENTE" MODIFY ("NOMBRE" NOT NULL ENABLE);
-  ALTER TABLE "DERIK"."CLIENTE" MODIFY ("APELLIDO" NOT NULL ENABLE);
-  ALTER TABLE "DERIK"."CLIENTE" MODIFY ("TIPO_CLIENTE" NOT NULL ENABLE);
-  ALTER TABLE "DERIK"."CLIENTE" MODIFY ("EMAIL" NOT NULL ENABLE);
-  ALTER TABLE "DERIK"."CLIENTE" MODIFY ("TELEFONO" NOT NULL ENABLE);
+  ALTER TABLE "DERIK"."CLIENTE" ADD UNIQUE ("EMAIL")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1
+  BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "USERS"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table DETALLE_SERVICIO
 --------------------------------------------------------
@@ -1009,23 +1018,11 @@ END PAQ_TECNICO;
   ALTER TABLE "DERIK"."DETALLE_SERVICIO" MODIFY ("HORAS_TRABAJADAS" NOT NULL ENABLE);
   ALTER TABLE "DERIK"."DETALLE_SERVICIO" MODIFY ("COSTO_APROXIMADO" NOT NULL ENABLE);
 --------------------------------------------------------
---  Ref Constraints for Table CONTRATO_MANTENIMIENTO
---------------------------------------------------------
-
-  ALTER TABLE "DERIK"."CONTRATO_MANTENIMIENTO" ADD FOREIGN KEY ("ID_CLIENTE")
-	  REFERENCES "DERIK"."CLIENTE" ("ID_CLIENTE") ENABLE;
---------------------------------------------------------
 --  Ref Constraints for Table DETALLE_SERVICIO
 --------------------------------------------------------
 
   ALTER TABLE "DERIK"."DETALLE_SERVICIO" ADD CONSTRAINT "FK_DETALLE_ORDEN" FOREIGN KEY ("ID_ORDEN")
 	  REFERENCES "DERIK"."ORDEN_SERVICIO" ("ID_ORDEN") ENABLE;
---------------------------------------------------------
---  Ref Constraints for Table EQUIPO
---------------------------------------------------------
-
-  ALTER TABLE "DERIK"."EQUIPO" ADD CONSTRAINT "FK_EQUIPO_CLIENTE" FOREIGN KEY ("ID_CLIENTE")
-	  REFERENCES "DERIK"."CLIENTE" ("ID_CLIENTE") ENABLE;
 --------------------------------------------------------
 --  Ref Constraints for Table ORDEN_SERVICIO
 --------------------------------------------------------
