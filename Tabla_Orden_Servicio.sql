@@ -1,0 +1,68 @@
+--------------------------------------------------------
+-- Archivo creado  - martes-agosto-26-2025   
+--------------------------------------------------------
+--------------------------------------------------------
+--  DDL for Table ORDEN_SERVICIO
+--------------------------------------------------------
+
+  CREATE TABLE "DERIK"."ORDEN_SERVICIO" 
+   (	"ID_ORDEN" NUMBER(*,0), 
+	"ID_EQUIPO" NUMBER(*,0), 
+	"ID_TECNICO" NUMBER(*,0), 
+	"FECHA_INICIO" DATE, 
+	"FECHA_FIN" DATE, 
+	"ESTADO" VARCHAR2(50 BYTE), 
+	"TIPO_SERVICIO" VARCHAR2(50 BYTE), 
+	"ID_ESTADO" NUMBER
+   ) SEGMENT CREATION DEFERRED 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 
+ NOCOMPRESS LOGGING
+  TABLESPACE "USERS" ;
+REM INSERTING into DERIK.ORDEN_SERVICIO
+SET DEFINE OFF;
+--------------------------------------------------------
+--  DDL for Index SYS_C008386
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "DERIK"."SYS_C008386" ON "DERIK"."ORDEN_SERVICIO" ("ID_ORDEN") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  TABLESPACE "USERS" ;
+--------------------------------------------------------
+--  DDL for Trigger TRG_ESTADO_POR_DEFECTO_ORDEN
+--------------------------------------------------------
+
+  CREATE OR REPLACE NONEDITIONABLE TRIGGER "DERIK"."TRG_ESTADO_POR_DEFECTO_ORDEN" 
+BEFORE INSERT ON orden_servicio
+FOR EACH ROW
+BEGIN
+  IF :NEW.estado IS NULL THEN
+    :NEW.estado := 'Pendiente';
+  END IF;
+END;
+
+/
+ALTER TRIGGER "DERIK"."TRG_ESTADO_POR_DEFECTO_ORDEN" ENABLE;
+--------------------------------------------------------
+--  Constraints for Table ORDEN_SERVICIO
+--------------------------------------------------------
+
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" ADD PRIMARY KEY ("ID_ORDEN")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  TABLESPACE "USERS"  ENABLE;
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" MODIFY ("ID_ORDEN" NOT NULL ENABLE);
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" MODIFY ("ID_EQUIPO" NOT NULL ENABLE);
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" MODIFY ("ID_TECNICO" NOT NULL ENABLE);
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" MODIFY ("FECHA_INICIO" NOT NULL ENABLE);
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" MODIFY ("ESTADO" NOT NULL ENABLE);
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" MODIFY ("TIPO_SERVICIO" NOT NULL ENABLE);
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" MODIFY ("ID_ESTADO" NOT NULL ENABLE);
+--------------------------------------------------------
+--  Ref Constraints for Table ORDEN_SERVICIO
+--------------------------------------------------------
+
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" ADD CONSTRAINT "FK_ORDEN_EQUIPO" FOREIGN KEY ("ID_EQUIPO")
+	  REFERENCES "DERIK"."EQUIPO" ("ID_EQUIPO") ENABLE;
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" ADD CONSTRAINT "FK_ORDEN_TECNICO" FOREIGN KEY ("ID_TECNICO")
+	  REFERENCES "DERIK"."TECNICO" ("ID_TECNICO") ENABLE;
+  ALTER TABLE "DERIK"."ORDEN_SERVICIO" ADD CONSTRAINT "FK_ESTADO_ORDEN" FOREIGN KEY ("ID_ESTADO")
+	  REFERENCES "DERIK"."ESTADO_ORDEN" ("ID_ESTADO") ENABLE;
